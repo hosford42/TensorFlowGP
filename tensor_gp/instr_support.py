@@ -3,10 +3,9 @@ from functools import wraps
 from typing import Callable, Tuple
 
 import tensorflow as tf
-from tensorflow.python.types.core import TensorLike
 
 from tensor_gp.astuple_fix import astuple
-from tensor_gp.data_types import Population, ExecutionContext, PopulationConfig
+from tensor_gp.data_types import Population, ExecutionContext, PopulationConfig, TensorLike
 
 
 # Every instruction should be decorated with @instr and have the type signature

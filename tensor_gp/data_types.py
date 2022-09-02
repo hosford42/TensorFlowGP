@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Union, NamedTuple
 
 import tensorflow as tf
+from tensorflow.python.types import core
 
-
-TensorLike = Union[tf.Tensor, tf.Variable]
+TensorLike = Union[core.TensorLike, tf.Variable]
 
 
 # TODO: The stack size and output sizes should go in the execution context, not the population

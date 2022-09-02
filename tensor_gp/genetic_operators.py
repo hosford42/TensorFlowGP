@@ -1,8 +1,9 @@
 from typing import Tuple
 
 import tensorflow as tf
-from tensorflow.python.types.core import TensorLike
 import tensorflow_probability as tfp
+
+from tensor_gp.data_types import TensorLike
 
 
 @tf.function
@@ -82,8 +83,8 @@ def elite_selection(choices: TensorLike, weights: TensorLike, count: int) -> tf.
 
 
 @tf.function
-def update_population(parents: TensorLike, fitnesses: TensorLike, crossover_rate: float = 0.0,
-                      mutation_rate: float = 0.0, elite: int = 0, min_val=None,
+def update_population(parents: TensorLike, fitnesses: TensorLike, crossover_rate: TensorLike = 0.0,
+                      mutation_rate: TensorLike = 0.0, elite: TensorLike = 0, min_val=None,
                       max_val=None) -> tf.Tensor:
     parents = tf.convert_to_tensor(parents)
     fitnesses = tf.convert_to_tensor(fitnesses)

@@ -2,11 +2,10 @@ from dataclasses import replace
 from typing import Sequence, Callable, Tuple
 
 import tensorflow as tf
-from tensorflow.python.types.core import TensorLike
 
 from tensor_gp.astuple_fix import astuple
 from tensor_gp.c_instr import CONTROL_INSTRUCTIONS
-from tensor_gp.data_types import ExecutionContext, Population, PopulationConfig
+from tensor_gp.data_types import ExecutionContext, Population, PopulationConfig, TensorLike
 from tensor_gp.f_instr import FLOATING_POINT_INSTRUCTIONS
 from tensor_gp.genetic_operators import update_population
 from tensor_gp.i_instr import INTEGER_INSTRUCTIONS
@@ -95,9 +94,46 @@ class Controller:
         self.step_function = make_step_function(self.population.config, self.instruction_set)
         self.run_function = make_run_function(self.population.config, self.step_function)
 
-        self.mutation_rate = 1.0 / tf.cast(tf.shape(population.instructions)[-1], tf.float32)
-        self.crossover_rate = 1.0
-        self.elite = 1
+        self._mutation_rate = tf.Variable(
+            1.0 / tf.cast(tf.shape(population.instructions)[-1], tf.float32),
+            trainable=False,
+            name='mutation_rate'
+        )
+        self._crossover_rate = tf.Variable(
+            1.0,
+            trainable=False,
+            name='crossover_rate'
+        )
+        self._elite = tf.Variable(
+            1,
+            trainable=False,
+            name='elite'
+        )
+
+    @property
+    def mutation_rate(self) -> float:
+        return self._mutation_rate.numpy()
+
+    @mutation_rate.setter
+    def mutation_rate(self, value: float) -> None:
+        self._mutation_rate.assign(float(value))
+
+    @property
+    def crossover_rate(self) -> float:
+        return self._crossover_rate.numpy()
+
+    @crossover_rate.setter
+    def crossover_rate(self, value: float) -> None:
+        self._crossover_rate.assign(float(value))
+
+    @property
+    def elite(self) -> int:
+        return self._elite.numpy()
+
+    @elite.setter
+    def elite(self, value: int) -> None:
+        assert value == int(value)
+        self._elite.assign(int(value))
 
     def run(self, context: ExecutionContext) -> None:
         self.population.init()
@@ -117,8 +153,8 @@ class Controller:
         instructions = update_population(
             parents=self.population.instructions,
             fitnesses=fitnesses,
-            crossover_rate=self.crossover_rate,
-            mutation_rate=self.mutation_rate,
-            elite=self.elite
+            crossover_rate=self._crossover_rate,
+            mutation_rate=self._mutation_rate,
+            elite=self._elite
         )
         self.population.instructions.assign(instructions)
