@@ -101,6 +101,7 @@ def test_f_normal():
     )
     population = new_population(config)
     controller = Controller(population)
+    # controller.mutation_rate = 2.0 / 35.0
 
     context = ExecutionContext(
         max_steps=35,
@@ -124,12 +125,20 @@ def test_f_normal():
                              axis=-1)
         loss = tf.where(tf.math.is_finite(loss), loss, tf.float32.max)  # remove nan & inf
 
-        max_loss = tf.reduce_max(loss)
-        min_loss = tf.reduce_min(loss)
+        scaled_loss = tf.reduce_sum(
+            tf.square((controller.population.float_outputs - answer[tf.newaxis, :]) /
+                      (tf.abs(answer[tf.newaxis, :]) + 0.000001)),
+            axis=-1
+        )
+        scaled_loss = tf.where(tf.math.is_finite(scaled_loss),
+                               scaled_loss, tf.float32.max)  # remove nan & inf
+
+        max_loss = tf.reduce_max(scaled_loss)
+        min_loss = tf.reduce_min(scaled_loss)
         loss_range = max_loss - min_loss
         if loss_range == 0.0:
             loss_range = 1.0
-        relative_fitness = (max_loss - loss) / loss_range * 1000000.0
+        relative_fitness = (max_loss - scaled_loss) / loss_range * 1000000.0
 
         input_heads_moved = (
                 tf.cast(controller.population.int_input_pointers != 0, tf.float32) +
@@ -149,10 +158,20 @@ def test_f_normal():
                 tf.cast(controller.population.float_output_pointers != 0, tf.float32)
         )
 
+        unique_output = (
+            sum(1.0 / tf.cast(tf.unique_with_counts(controller.population.int_outputs[i])[-1],
+                              tf.float32)
+                for i in range(tf.shape(controller.population.int_outputs)[1])) +
+            sum(1.0 / tf.cast(tf.unique_with_counts(controller.population.float_outputs[i])[-1],
+                              tf.float32)
+                for i in range(tf.shape(controller.population.float_outputs)[1]))
+        )
+
         relative_fitness = (relative_fitness +
                             input_heads_moved +
                             outputs_written +
-                            output_heads_moved)
+                            output_heads_moved +
+                            unique_output)
 
         best = controller.population.instructions[tf.argmax(relative_fitness)]
 
@@ -172,6 +191,7 @@ def test_f_normal():
             print(program_to_string(best, controller.instruction_set))
             print()
 
+        controller.mutation_rate = 1.0 / (0.01 * epoch + 2.0)
         controller.update(relative_fitness)
 
 
